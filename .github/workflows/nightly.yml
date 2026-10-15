@@ -2,14 +2,18 @@ name: nightly snapshot + deploy
 
 on:
   schedule:
-    # 22:00 UTC Mon–Fri = 06:00 SGT Tue–Sat. Covers the US close in both EDT (04:00 SGT) and EST (05:00 SGT).
+    # 06:00 SGT Tue–Sat (22:00 UTC Mon–Fri): main sync after the US close (04:00/05:00 SGT).
     - cron: '0 22 * * 1-5'
+    # 08:00, 10:00, 12:00 SGT Tue–Sat: gap-fill checks. Only tickers missing for the latest
+    # session are fetched; if nothing is missing the run exits without deploying.
+    - cron: '0 0,2,4 * * 2-6'
   workflow_dispatch:
     inputs:
-      skip_snapshot:
-        description: 'Rebuild and deploy the site from the existing data branch only'
-        type: boolean
-        default: false
+      mode:
+        description: 'What to do'
+        type: choice
+        options: [fill-missing, refetch-all, deploy-only]
+        default: fill-missing
   push:
     branches: [master]
     paths: ['web/**', '.github/workflows/nightly.yml']
@@ -24,8 +28,12 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  snapshot:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      updated: ${{ steps.run.outputs.updated }}
+      missing: ${{ steps.run.outputs.missing }}
     steps:
       - uses: actions/checkout@v4
 
@@ -34,26 +42,36 @@ jobs:
         run: |
           if git ls-remote --exit-code --heads origin data >/dev/null; then
             git fetch --depth=1 origin data
-            git worktree add data-store FETCH_HEAD
+            git worktree add --detach data-store FETCH_HEAD
           else
             mkdir data-store
           fi
 
       - uses: actions/setup-python@v5
-        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.skip_snapshot)
+        if: github.event_name != 'push' && inputs.mode != 'deploy-only'
         with:
           python-version: '3.12'
           cache: pip
           cache-dependency-path: pipeline/requirements.txt
 
       - name: Snapshot chains
-        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.skip_snapshot)
+        id: run
+        if: github.event_name != 'push' && inputs.mode != 'deploy-only'
         run: |
-          pip install -r pipeline/requirements.txt
-          python -m pipeline.run --out data-store
+          pip install -q -r pipeline/requirements.txt
+          python -m pipeline.run --out data-store --status-file status.json \
+            ${{ inputs.mode == 'refetch-all' && ' ' || '--only-missing' }}
+          echo "updated=$(jq -r '.updated | join(" ")' status.json)" >> "$GITHUB_OUTPUT"
+          echo "missing=$(jq -r '.missing | join(" ")' status.json)" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Snapshot for session $(jq -r .session status.json)"
+            echo "- updated: $(jq -r '.updated | join(", ")' status.json)"
+            echo "- still missing: $(jq -r '.missing | join(", ")' status.json)"
+            jq -r '.failures | to_entries[] | "- ❌ \(.key): \(.value)"' status.json
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Publish data branch (single commit, replaces history)
-        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.skip_snapshot)
+        if: steps.run.outputs.updated != ''
         working-directory: data-store
         run: |
           rm -rf .git
@@ -65,12 +83,14 @@ jobs:
           git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" data:data
 
       - uses: actions/setup-node@v4
+        if: steps.run.outputs.updated != '' || github.event_name == 'push' || inputs.mode == 'deploy-only'
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: web/package-lock.json
 
       - name: Build site
+        if: steps.run.outputs.updated != '' || github.event_name == 'push' || inputs.mode == 'deploy-only'
         working-directory: web
         run: |
           npm ci
@@ -80,11 +100,22 @@ jobs:
           fi
 
       - uses: actions/upload-pages-artifact@v3
+        if: steps.run.outputs.updated != '' || github.event_name == 'push' || inputs.mode == 'deploy-only'
         with:
           path: web/dist
 
+      # The 12:00 SGT check is the last chance for the day: go red if anything is still missing.
+      - name: Fail if tickers are still missing after the final check
+        if: github.event.schedule == '0 0,2,4 * * 2-6' && steps.run.outputs.missing != ''
+        run: |
+          if [ "$(date -u +%H)" -ge 4 ]; then
+            echo "::error::Still missing after final check: ${{ steps.run.outputs.missing }}"
+            exit 1
+          fi
+
   deploy:
-    needs: build
+    needs: snapshot
+    if: always() && needs.snapshot.result != 'cancelled' && (needs.snapshot.outputs.updated != '' || github.event_name == 'push' || inputs.mode == 'deploy-only')
     runs-on: ubuntu-latest
     environment:
       name: github-pages

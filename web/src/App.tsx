@@ -52,7 +52,7 @@ export default function App() {
               Source: Cboe delayed quotes, snapshotted after the close. Data as of{' '}
               <span className="mono">{new Date(index.generatedAt).toLocaleString()}</span>; full chains kept for{' '}
               {index.retentionDays} trading days, daily metrics kept indefinitely.
-              {Object.keys(index.failures).length > 0 && <> Failed last run: {Object.keys(index.failures).join(', ')}.</>}{' '}
+              {index.missing?.length > 0 && <> <span className="text-bad">Missing for the {index.session} close: {index.missing.join(', ')}</span> — showing their previous snapshot.</>}{' '}
               Not investment advice — residuals are relative to a model fit, and closing quotes can be stale.
             </footer>
           </>

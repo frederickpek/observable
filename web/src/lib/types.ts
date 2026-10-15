@@ -30,7 +30,9 @@ export interface IndexTicker {
 export interface IndexFile {
   generatedAt: string
   retentionDays: number
+  session: string | null
   failures: Record<string, string>
+  missing: string[]
   tickers: IndexTicker[]
 }
 
