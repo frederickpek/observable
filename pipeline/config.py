@@ -2,7 +2,6 @@
 
 TICKERS: dict[str, str] = {
     "SPY": "S&P 500 ETF",
-    "QQQ": "Nasdaq-100 ETF",
     "AAPL": "Apple",
     "MSFT": "Microsoft",
     "NVDA": "NVIDIA",
@@ -10,17 +9,6 @@ TICKERS: dict[str, str] = {
     "GOOGL": "Alphabet",
     "META": "Meta Platforms",
     "TSLA": "Tesla",
-    "AVGO": "Broadcom",
-    "BRK.B": "Berkshire Hathaway",
-    "JPM": "JPMorgan Chase",
-    "LLY": "Eli Lilly",
-    "V": "Visa",
-    "UNH": "UnitedHealth",
-    "XOM": "Exxon Mobil",
-    "MA": "Mastercard",
-    "COST": "Costco",
-    "NFLX": "Netflix",
-    "AMD": "AMD",
 }
 
 # Full per-day chain snapshots kept per ticker; daily metrics are kept forever.
