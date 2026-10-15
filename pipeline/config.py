@@ -13,6 +13,10 @@ TICKERS: dict[str, str] = {
     "PLTR": "Palantir",
     "AMD": "AMD",
     "MU": "Micron",
+    "TLT": "20+ Year Treasury ETF",
+    "GLD": "Gold ETF",
+    "USO": "Crude Oil ETF",
+    "IBIT": "Bitcoin ETF",
 }
 
 # Full per-day chain snapshots kept per ticker; daily metrics are kept forever.
