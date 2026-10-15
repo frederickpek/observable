@@ -51,6 +51,9 @@ cd web && npm install && npm run dev
 
 Edit the universe in `pipeline/config.py`.
 
+The local site reads `web/public/data/`, which is separate from the deployed data. See
+[docs/local-data.md](docs/local-data.md) to generate your own or mirror the deployed history.
+
 Commit messages are checked by `.githooks/commit-msg`; enable it with
 `git config core.hooksPath .githooks`.
 
