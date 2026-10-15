@@ -1,0 +1,94 @@
+name: nightly snapshot + deploy
+
+on:
+  schedule:
+    # 22:00 UTC Mon–Fri = 06:00 SGT Tue–Sat. Covers the US close in both EDT (04:00 SGT) and EST (05:00 SGT).
+    - cron: '0 22 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      skip_snapshot:
+        description: 'Rebuild and deploy the site from the existing data branch only'
+        type: boolean
+        default: false
+  push:
+    branches: [master]
+    paths: ['web/**', '.github/workflows/nightly.yml']
+
+permissions:
+  contents: write   # push the data branch
+  pages: write
+  id-token: write
+
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Stored history lives on an orphan `data` branch; first run starts empty.
+      - name: Check out data branch
+        run: |
+          if git ls-remote --exit-code --heads origin data >/dev/null; then
+            git fetch --depth=1 origin data
+            git worktree add data-store FETCH_HEAD
+          else
+            mkdir data-store
+          fi
+
+      - uses: actions/setup-python@v5
+        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.skip_snapshot)
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: pipeline/requirements.txt
+
+      - name: Snapshot chains
+        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.skip_snapshot)
+        run: |
+          pip install -r pipeline/requirements.txt
+          python -m pipeline.run --out data-store
+
+      - name: Publish data branch (single commit, replaces history)
+        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.skip_snapshot)
+        working-directory: data-store
+        run: |
+          rm -rf .git
+          git init -q -b data
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "snapshot $(jq -r .generatedAt index.json)"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" data:data
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build site
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+          if [ -f ../data-store/index.json ]; then
+            mkdir -p dist/data && cp -r ../data-store/index.json ../data-store/metrics.json ../data-store/chains dist/data/
+          fi
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
