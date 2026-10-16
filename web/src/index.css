@@ -113,3 +113,34 @@ details.guide > summary::before {
   transform: rotate(-45deg); transition: transform 0.15s; margin-right: 2px;
 }
 details.guide[open] > summary::before { transform: rotate(45deg); }
+
+a.link { color: var(--accent-2); text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; }
+a.link:hover { color: var(--ink); }
+
+/* Single-line chart legends: scroll sideways on narrow screens instead of wrapping. */
+.legend { scrollbar-width: none; }
+.legend::-webkit-scrollbar { display: none; }
+.legend > span { flex: none; }
+
+/* Stat tile hover/focus definitions */
+.stat-info {
+  display: inline-grid; place-items: center; width: 12px; height: 12px; border-radius: 50%;
+  border: 1px solid var(--line); font-size: 8.5px; font-family: var(--font-mono); text-transform: none;
+  color: var(--ink-muted); line-height: 1;
+}
+.stat:hover .stat-info, .stat:focus-visible .stat-info { border-color: var(--accent-2); color: var(--accent-2); }
+.stat-pop {
+  position: absolute; top: calc(100% + 6px); z-index: 30; width: 300px; padding: 10px 12px; border-radius: 8px;
+  background: var(--ink); color: var(--bg); font-size: 12.5px; line-height: 1.5; text-transform: none; letter-spacing: 0;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.25);
+  opacity: 0; visibility: hidden; transform: translateY(-2px); transition: opacity 0.12s, transform 0.12s, visibility 0.12s;
+  pointer-events: none;
+}
+.stat-pop-left { left: 0; }
+.stat-pop-center { left: 50%; translate: -50% 0; }
+.stat-pop-right { right: 0; }
+.stat:hover .stat-pop, .stat:focus-visible .stat-pop { opacity: 1; visibility: visible; transform: none; }
+.stat-pop-h {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;
+  color: color-mix(in oklab, var(--bg) 65%, var(--ink));
+}

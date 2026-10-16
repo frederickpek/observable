@@ -1,7 +1,7 @@
 import { scaleLinear } from 'd3-scale'
 import { line } from 'd3-shape'
 import { useMemo, useState } from 'react'
-import { zColor } from '../lib/color'
+import { isNeutral, zColor } from '../lib/color'
 import { contracts, sviVol } from '../lib/data'
 import { int, money, num, pct, volPts } from '../lib/format'
 import type { Contract, Slice } from '../lib/types'
@@ -10,6 +10,9 @@ import { svgPoint, useTooltip } from './Tooltip'
 const W = 760
 const H = 360
 const M = { top: 26, right: 18, bottom: 40, left: 46 }
+const BAR_OPACITY = 0.45
+const FWD_DASH = '3 3'
+const SPOT_DASH = '1 3'
 
 export function SmileChart({ slice, spot }: { slice: Slice; spot: number }) {
   const { wrapRef, show, hide, node } = useTooltip()
@@ -87,18 +90,21 @@ export function SmileChart({ slice, spot }: { slice: Slice; spot: number }) {
         <text className="axis-label" x={W - M.right} y={H - 6} textAnchor="end">Strike</text>
         <text className="axis-label" x={M.left} y={M.top - 12}>Implied vol</text>
 
-        {/* forward & spot markers */}
+        {/* forward & spot markers. The two are often a few pixels apart, so the lower price is
+            labelled to the left of its line and the higher one to the right. */}
         {[
-          { v: slice.F, label: `F ${money(slice.F)}` },
-          { v: spot, label: 'spot' },
-        ].map(({ v, label }, i) =>
-          v >= x.domain()[0] && v <= x.domain()[1] ? (
-            <g key={label}>
-              <line x1={x(v)} x2={x(v)} y1={M.top} y2={H - M.bottom} stroke="var(--ink-muted)" strokeDasharray={i ? '1 3' : '3 3'} />
-              {i === 0 && <text className="tick" x={x(v) + 5} y={M.top + 8}>{label}</text>}
+          { key: 'fwd', v: slice.F, label: `fwd ${money(slice.F)}`, dash: FWD_DASH, other: spot },
+          { key: 'spot', v: spot, label: `spot ${money(spot)}`, dash: SPOT_DASH, other: slice.F },
+        ].map(({ key, v, label, dash, other }) => {
+          if (v < x.domain()[0] || v > x.domain()[1]) return null
+          const right = v >= other
+          return (
+            <g key={key}>
+              <line x1={x(v)} x2={x(v)} y1={M.top} y2={H - M.bottom} stroke="var(--ink-muted)" strokeDasharray={dash} />
+              <text className="tick" x={x(v) + (right ? 5 : -5)} y={M.top + 8} textAnchor={right ? 'start' : 'end'}>{label}</text>
             </g>
-          ) : null,
-        )}
+          )
+        })}
 
         {/* bid–ask IV bars */}
         {pts.map((c, i) =>
@@ -108,7 +114,7 @@ export function SmileChart({ slice, spot }: { slice: Slice; spot: number }) {
               x1={x(c.K)} x2={x(c.K)}
               y1={y(Math.max(c.ivBid ?? y.domain()[0], y.domain()[0]))}
               y2={y(Math.min(c.ivAsk ?? y.domain()[1], y.domain()[1]))}
-              stroke="var(--ink-muted)" strokeWidth={2} strokeLinecap="round" opacity={c.z == null ? 0.25 : 0.45}
+              stroke="var(--ink-muted)" strokeWidth={2} strokeLinecap="round" opacity={c.z == null ? 0.25 : BAR_OPACITY}
             />
           ) : null,
         )}
@@ -117,12 +123,15 @@ export function SmileChart({ slice, spot }: { slice: Slice; spot: number }) {
 
         {pts.map((c, i) => {
           const fitted = c.z != null
+          // No-signal dots are drawn faint and without a surface ring so the fit line shows through.
+          const quiet = fitted && isNeutral(c.z, c.conf) && i !== hover
           return (
             <circle
               key={`m${i}`}
               cx={x(c.K)} cy={y(c.ivMid!)} r={i === hover ? r + 2 : r}
               fill={fitted ? zColor(c.z, c.conf) : 'var(--surface)'}
-              stroke={fitted ? 'var(--surface)' : 'var(--ink-muted)'}
+              fillOpacity={quiet ? 0.6 : 1}
+              stroke={quiet ? 'none' : fitted ? 'var(--surface)' : 'var(--ink-muted)'}
               strokeWidth={fitted ? (r < 3.5 ? 0.75 : 2) : 1.25}
             />
           )
@@ -139,7 +148,7 @@ export function SmileChart({ slice, spot }: { slice: Slice; spot: number }) {
 
 export function ContractTip({ c }: { c: Contract }) {
   const verdict =
-    c.z == null ? 'not fitted (illiquid / wide)' : Math.abs(c.z) <= 1 ? 'inside spread' : c.z > 0 ? 'rich vs fit' : 'cheap vs fit'
+    c.z == null ? 'not fitted (spread too wide / far wing)' : Math.abs(c.z) <= 1 ? 'inside spread' : c.z > 0 ? 'rich vs fit' : 'cheap vs fit'
   return (
     <div>
       <div style={{ fontWeight: 600 }}>{c.K} {c.cp === 'C' ? 'call' : 'put'} · {c.exp}</div>
@@ -156,13 +165,13 @@ export function ContractTip({ c }: { c: Contract }) {
 export function SmileLegend() {
   const item = 'inline-flex items-center gap-1.5'
   return (
-    <div className="flex flex-wrap gap-4 text-xs text-muted mt-3">
+    <div className="legend flex flex-nowrap gap-3.5 whitespace-nowrap overflow-x-auto text-xs text-muted mt-3 pb-1">
       <span className={item}><i className="inline-block w-4 h-[2.5px] rounded" style={{ background: 'var(--accent)' }} />SVI fit</span>
-      <span className={item}><i className="inline-block w-[2px] h-3 rounded" style={{ background: 'var(--ink-muted)' }} />bid–ask IV</span>
+      <span className={item}><i className="inline-block w-[2px] h-3 rounded" style={{ background: 'var(--ink-muted)', opacity: BAR_OPACITY }} />bid–ask IV</span>
       <span className={item}><i className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: 'var(--rich)' }} />rich (mid above fit)</span>
       <span className={item}><i className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: 'var(--cheap)' }} />cheap (mid below fit)</span>
-      <span className={item}><i className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: 'var(--neutral)' }} />inside spread</span>
-      <span className={item}><i className="inline-block w-2.5 h-2.5 rounded-full border" style={{ borderColor: 'var(--ink-muted)' }} />not fitted</span>
+      <span className={item}><i className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: 'var(--neutral)', opacity: 0.7 }} />inside spread (no signal)</span>
+      <span className={item}><i className="inline-block w-2.5 h-2.5 rounded-full border" style={{ borderColor: 'var(--ink-muted)' }} />not fitted (spread too wide / far wing)</span>
     </div>
   )
 }
