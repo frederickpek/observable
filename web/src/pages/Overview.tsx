@@ -24,8 +24,8 @@ export function Overview({ tickers, onOpen }: { tickers: IndexTicker[]; onOpen: 
       sort.key === 'symbol' ? sort.dir * a.t.symbol.localeCompare(b.t.symbol) : sort.dir * ((v(a) ?? -Infinity) - (v(b) ?? -Infinity)),
     )
   }, [tickers, sort])
-  const th = (key: Key, label: string, title?: string) => (
-    <th title={title}>
+  const th = (key: Key, label: string, title?: string, className?: string) => (
+    <th title={title} className={className}>
       <button onClick={() => setSort((s) => ({ key, dir: s.key === key ? (-s.dir as 1 | -1) : -1 }))}>
         {label}{sort.key === key ? (sort.dir < 0 ? ' ↓' : ' ↑') : ''}
       </button>
@@ -47,7 +47,7 @@ export function Overview({ tickers, onOpen }: { tickers: IndexTicker[]; onOpen: 
               <th>Spot</th>
               {th('atm30', 'IV 30d')}
               <th>RV 20d</th>
-              {th('vrp', 'IV − RV', 'vol pts')}
+              {th('vrp', 'IV − RV', 'vol pts', 'w-[26%]')}
               {th('rr25', '25Δ RR', '30d call − put vol')}
               {th('term', '90d − 30d')}
             </tr>
@@ -55,14 +55,16 @@ export function Overview({ tickers, onOpen }: { tickers: IndexTicker[]; onOpen: 
           <tbody>
             {rows.map(({ t, s, vrp, term }) => (
               <tr key={t.symbol} onClick={() => onOpen(t.symbol)}>
-                <td><span className="font-semibold">{t.symbol}</span> <span className="text-muted text-[11px] font-sans">{t.name}</span></td>
+                {/* Fixed-width symbol (monospace, longest is 5 chars) so every name starts at the same x. */}
+                <td><span className="inline-block w-[6ch] font-semibold">{t.symbol}</span><span className="text-muted text-[11px] font-sans">{t.name}</span></td>
                 <td>{money(s.spot)}</td>
                 <td>{pct(s.atm30)}</td>
                 <td>{pct(s.rv20)}</td>
                 <td>
-                  <span className="inline-flex items-center gap-2 justify-end">
-                    <span className="relative inline-block w-16 h-2">
-                      <span className="absolute left-1/2 top-0 bottom-0 w-px bg-line" />
+                  {/* Bar fills the column, centred on a zero line, so bars line up and no gap opens on the left. */}
+                  <span className="flex items-center gap-3">
+                    <span className="relative flex-1 min-w-24 h-2">
+                      <span className="absolute left-1/2 -top-1 -bottom-1 w-px bg-line" />
                       {vrp != null && (
                         <span className="absolute top-0 bottom-0 rounded-sm" style={{
                           background: vrp > 0 ? 'var(--rich)' : 'var(--cheap)',
@@ -71,7 +73,7 @@ export function Overview({ tickers, onOpen }: { tickers: IndexTicker[]; onOpen: 
                         }} />
                       )}
                     </span>
-                    <span className="w-12">{volPts(vrp)}</span>
+                    <span className="w-12 text-right">{volPts(vrp)}</span>
                   </span>
                 </td>
                 <td>{volPts(s.rr25)}</td>
