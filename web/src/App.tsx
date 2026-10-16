@@ -3,6 +3,18 @@ import { useIndex, useMetrics } from './lib/data'
 import { Overview } from './pages/Overview'
 import { TickerPage } from './pages/TickerPage'
 
+const YEAR = new Date().getFullYear()
+
+// e.g. "16 Oct 2026, 8:13 AM SGT", in the viewer's own timezone. en-SG gives the short zone name
+// (SGT, EDT, BST); the date and time are assembled by hand for an uppercase AM/PM.
+function formatAsOf(iso: string) {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-SG', {
+      day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true, timeZoneName: 'short',
+    }).formatToParts(new Date(iso)).map((p) => [p.type, p.value]),
+  )
+  return `${parts.day} ${parts.month} ${parts.year}, ${parts.hour}:${parts.minute} ${parts.dayPeriod.toUpperCase()} ${parts.timeZoneName}`
+}
 const readHash = () => decodeURIComponent(location.hash.replace(/^#\/?/, '')) || null
 
 export default function App() {
@@ -20,17 +32,32 @@ export default function App() {
   return (
     <div className="px-4 pt-7 pb-16">
       <div className="max-w-[1120px] mx-auto">
-        <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="eyebrow mb-1.5">End-of-day options analytics · S&amp;P 500 leaders</p>
-            <h1 className="text-[28px] font-bold mb-2"><button onClick={() => go(null)}>Vol Surface Observatory</button></h1>
-            <p className="blurb max-w-[64ch]">
-              Every US close, each chain is cleaned, re-implied off its put–call-parity forward, and fitted with an SVI smile.
-              Quotes that sit outside their own bid–ask relative to the fit are flagged <strong>rich</strong> or{' '}
-              <strong>cheap</strong>, with a confidence that accounts for spread and liquidity.
-            </p>
+        <header className="mb-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="eyebrow mb-1.5">End-of-day options analytics · US equities &amp; ETFs</p>
+              <h1 className="text-[28px] font-bold mb-2"><button onClick={() => go(null)}>Vol Surface Observatory</button></h1>
+            </div>
+            <ThemeToggle />
           </div>
-          <ThemeToggle />
+          <div className="flex flex-wrap lg:flex-nowrap items-start justify-between gap-x-10 gap-y-3">
+            <p className="blurb max-w-[64ch]">
+              Daily volatility surfaces for liquid US stocks and ETFs, built from each night's closing option chains.
+            </p>
+            {index && (
+              <p className="text-xs text-muted leading-relaxed lg:border-l lg:border-line lg:pl-4 lg:mt-1 shrink-0">
+                <span className="block">Source: Cboe delayed quotes, snapshotted after the close.</span>
+                <span className="block">
+                  Data as of <span className="mono text-ink">{formatAsOf(index.generatedAt)}</span>
+                </span>
+                {index.missing?.length > 0 && (
+                  <span className="block text-bad mt-1">
+                    Missing for the {index.session} close: {index.missing.join(', ')}; showing their previous snapshot.
+                  </span>
+                )}
+              </p>
+            )}
+          </div>
         </header>
 
         {error && <div className="card text-bad">Could not load data/index.json — run the pipeline first. ({error})</div>}
@@ -48,12 +75,8 @@ export default function App() {
             ) : (
               <Overview tickers={index.tickers} onOpen={go} />
             )}
-            <footer className="mt-8 pt-4 border-t border-line text-xs text-muted leading-relaxed max-w-[75ch]">
-              Source: Cboe delayed quotes, snapshotted after the close. Data as of{' '}
-              <span className="mono">{new Date(index.generatedAt).toLocaleString()}</span>; full chains kept for{' '}
-              {index.retentionDays} trading days, daily metrics kept indefinitely.
-              {index.missing?.length > 0 && <> <span className="text-bad">Missing for the {index.session} close: {index.missing.join(', ')}</span> — showing their previous snapshot.</>}{' '}
-              Not investment advice — residuals are relative to a model fit, and closing quotes can be stale.
+            <footer className="mt-8 pt-4 border-t border-line text-xs text-muted">
+              © {YEAR} Frederick Pek
             </footer>
           </>
         )}

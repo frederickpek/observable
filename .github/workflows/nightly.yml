@@ -4,9 +4,10 @@ on:
   schedule:
     # 06:00 SGT Tue–Sat (22:00 UTC Mon–Fri): main sync after the US close (04:00/05:00 SGT).
     - cron: '0 22 * * 1-5'
-    # 08:00, 10:00, 12:00 SGT Tue–Sat: gap-fill checks. Only tickers missing for the latest
+    # 09:00 and 12:00 SGT Tue–Sat: gap-fill checks. Only tickers missing for the latest
     # session are fetched; if nothing is missing the run exits without deploying.
-    - cron: '0 0,2,4 * * 2-6'
+    - cron: '0 1 * * 2-6'
+    - cron: '0 4 * * 2-6'
   workflow_dispatch:
     inputs:
       mode:
@@ -106,12 +107,10 @@ jobs:
 
       # The 12:00 SGT check is the last chance for the day: go red if anything is still missing.
       - name: Fail if tickers are still missing after the final check
-        if: github.event.schedule == '0 0,2,4 * * 2-6' && steps.run.outputs.missing != ''
+        if: github.event.schedule == '0 4 * * 2-6' && steps.run.outputs.missing != ''
         run: |
-          if [ "$(date -u +%H)" -ge 4 ]; then
-            echo "::error::Still missing after final check: ${{ steps.run.outputs.missing }}"
-            exit 1
-          fi
+          echo "::error::Still missing after final check: ${{ steps.run.outputs.missing }}"
+          exit 1
 
   deploy:
     needs: snapshot

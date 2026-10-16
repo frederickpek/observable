@@ -71,7 +71,8 @@ def summarize(asof, spot, slices, closes, history, calendar_bad) -> dict:
 
     atm30 = out["atm30"]
     past = [h["atm30"] for h in history if h.get("atm30") is not None][-251:]
-    if atm30 is not None and len(past) >= 20:
+    # Needs 20 sessions including today, matching the "N of 20d" shown in the UI.
+    if atm30 is not None and len(past) >= 19:
         lo, hi = min(past + [atm30]), max(past + [atm30])
         out["ivRank"] = round((atm30 - lo) / (hi - lo), 3) if hi > lo else None
         out["ivPct"] = round(sum(x <= atm30 for x in past) / len(past), 3)

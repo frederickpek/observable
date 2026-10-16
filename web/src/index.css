@@ -105,3 +105,11 @@ table.data tbody tr:hover { background: var(--surface-2); }
 .tabs { scrollbar-width: none; }
 .tabs::-webkit-scrollbar { display: none; }
 * { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+
+details.guide > summary { list-style: none; display: inline-flex; align-items: center; gap: 6px; }
+details.guide > summary::-webkit-details-marker { display: none; }
+details.guide > summary::before {
+  content: ''; width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg); transition: transform 0.15s; margin-right: 2px;
+}
+details.guide[open] > summary::before { transform: rotate(45deg); }

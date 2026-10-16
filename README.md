@@ -38,7 +38,7 @@ each night, so the repo never accumulates history of large JSON files:
 | When  | What |
 |-------|------|
 | 06:00 | Sync: fetch every ticker missing for the latest session → push `data` → deploy |
-| 08:00, 10:00, 12:00 | Check: fetch only tickers still missing; no-op (no deploy) if complete. The 12:00 run fails red if anything is still missing |
+| 09:00, 12:00 | Check: fetch only tickers still missing; no-op (no deploy) if complete. The 12:00 run fails red if anything is still missing |
 
 Reliability rules in the pipeline:
 - Transient errors (timeouts, 5xx, 429, garbled JSON) retry twice with backoff (~3s, ~9s); 4xx fails immediately.
