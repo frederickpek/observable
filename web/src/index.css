@@ -103,6 +103,8 @@ table.data tbody tr { cursor: pointer; }
 table.data tbody tr:hover { background: var(--surface-2); }
 
 .tabs { scrollbar-width: none; }
+/* The tab bar pins to the top once scrolled to; an opaque page-colour background stops content showing through. */
+.tabs { background: var(--bg); }
 .tabs::-webkit-scrollbar { display: none; }
 * { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 
@@ -159,3 +161,7 @@ a.link:hover { color: var(--ink); }
   position: absolute; top: 50%; left: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%;
   box-shadow: 0 0 0 1.5px var(--surface);
 }
+
+/* Scroll anchoring: when a ticker's data replaces the loading placeholder, the browser would otherwise
+   follow whatever it anchored to (often the footer) and leap down the page. Keep it off both. */
+footer, .page-loading { overflow-anchor: none; }

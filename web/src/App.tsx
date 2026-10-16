@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { useIndex, useMetrics } from './lib/data'
+import { useEffect, useRef, useState } from 'react'
+import { prefetchChain, useIndex, useMetrics } from './lib/data'
 import { Overview } from './pages/Overview'
 import { TickerPage } from './pages/TickerPage'
 
@@ -24,9 +24,26 @@ export default function App() {
   useEffect(() => {
     const on = () => setRoute(readHash())
     window.addEventListener('hashchange', on)
-    return () => window.removeEventListener('hashchange', on)
+    window.addEventListener('popstate', on)
+    return () => {
+      window.removeEventListener('hashchange', on)
+      window.removeEventListener('popstate', on)
+    }
   }, [])
-  const go = (sym: string | null) => (location.hash = sym ? `/${sym}` : '')
+  const navRef = useRef<HTMLElement>(null)
+  // Zero-height marker where the tab bar naturally sits; a stuck sticky bar can't report that itself.
+  const navAnchorRef = useRef<HTMLDivElement>(null)
+  // pushState rather than setting location.hash: an empty hash (Overview) makes the browser jump to the top.
+  // If the tab bar is pinned (scrolled past the header), keep it pinned after switching: a shorter page
+  // would otherwise pull the view back up and the tabs would slide away from the top.
+  const go = (sym: string | null) => {
+    const nav = navRef.current
+    const pinned = nav != null && nav.getBoundingClientRect().top <= 0
+    const navTop = navAnchorRef.current?.offsetTop ?? 0
+    history.pushState(null, '', sym ? `#/${sym}` : location.pathname + location.search)
+    setRoute(sym)
+    if (pinned) requestAnimationFrame(() => { if (scrollY < navTop) scrollTo(0, navTop) })
+  }
   const ticker = index?.tickers.find((t) => t.symbol === route) ?? null
 
   return (
@@ -64,14 +81,16 @@ export default function App() {
 
         {index && (
           <>
-            <nav className="tabs flex gap-0.5 border-b border-line mb-5 overflow-x-auto" role="tablist">
+            <div ref={navAnchorRef} />
+            <nav ref={navRef} className="tabs sticky top-0 z-40 flex gap-0.5 border-b border-line mb-5 overflow-x-auto" role="tablist">
               <Tab active={!ticker} onClick={() => go(null)}>Overview</Tab>
               {index.tickers.map((t) => (
-                <Tab key={t.symbol} active={ticker?.symbol === t.symbol} onClick={() => go(t.symbol)}>{t.symbol}</Tab>
+                <Tab key={t.symbol} active={ticker?.symbol === t.symbol} onClick={() => go(t.symbol)}
+                  onPrefetch={() => prefetchChain(t.symbol, t.dates[0])}>{t.symbol}</Tab>
               ))}
             </nav>
             {ticker ? (
-              <TickerPage key={ticker.symbol} ticker={ticker} history={metrics?.[ticker.symbol] ?? (ticker.latest ? [ticker.latest] : [])} />
+              <TickerPage ticker={ticker} history={metrics?.[ticker.symbol] ?? (ticker.latest ? [ticker.latest] : [])} />
             ) : (
               <Overview tickers={index.tickers} onOpen={go} />
             )}
@@ -85,12 +104,16 @@ export default function App() {
   )
 }
 
-function Tab({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function Tab({ active, onClick, onPrefetch, children }: {
+  active: boolean; onClick: () => void; onPrefetch?: () => void; children: React.ReactNode
+}) {
   return (
     <button
       role="tab"
       aria-selected={active}
       onClick={onClick}
+      onPointerEnter={onPrefetch}
+      onFocus={onPrefetch}
       className={`px-3.5 py-2.5 text-[13.5px] font-semibold -mb-px border-b-2 whitespace-nowrap transition-colors ${
         active ? 'text-accent border-accent' : 'text-muted border-transparent hover:text-ink'
       }`}
@@ -101,17 +124,19 @@ function Tab({ active, onClick, children }: { active: boolean; onClick: () => vo
 }
 
 function ThemeToggle() {
+  // null = Auto (follow the OS). index.html applies a saved choice before first paint.
   const [theme, setTheme] = useState<string | null>(() => document.documentElement.dataset.theme ?? null)
-  const apply = (t: string | null) => {
-    setTheme(t)
-    if (t) {
-      document.documentElement.dataset.theme = t
-      localStorage.setItem('theme', t)
+  useEffect(() => {
+    const root = document.documentElement
+    if (theme) {
+      root.dataset.theme = theme
+      localStorage.setItem('theme', theme)
     } else {
-      delete document.documentElement.dataset.theme
+      delete root.dataset.theme
       localStorage.removeItem('theme')
     }
-  }
+  }, [theme])
+  const apply = setTheme
   return (
     <div className="segmented" role="group" aria-label="Theme">
       {([['Auto', null], ['Light', 'light'], ['Dark', 'dark']] as const).map(([label, v]) => (

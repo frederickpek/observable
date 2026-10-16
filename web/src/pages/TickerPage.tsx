@@ -1,17 +1,21 @@
 import { useMemo, useState } from 'react'
 import { HistoryChart } from '../components/HistoryChart'
 import { VolSurface } from '../components/VolSurface'
-import { SignalsTable } from '../components/SignalsTable'
 import { SmileChart, SmileLegend } from '../components/SmileChart'
 import { InfoTip } from '../components/InfoTip'
 import { Stat, type StatHelp } from '../components/Stat'
 import { TermStructure } from '../components/TermStructure'
 import { useChain } from '../lib/data'
-import { expLabel, money, num, pct, shortDate, volPts } from '../lib/format'
+import { expLabel, money, pct, shortDate, volPts } from '../lib/format'
 import type { IndexTicker, Summary } from '../lib/types'
 
 export function TickerPage({ ticker, history }: { ticker: IndexTicker; history: Summary[] }) {
-  const [date, setDate] = useState(ticker.dates[0])
+  // The page stays mounted across tickers so the previous one stays on screen while the next loads,
+  // instead of collapsing to a loading card (which forces the browser back to the top). The chosen
+  // close date resets whenever the ticker changes.
+  const [picked, setPicked] = useState({ symbol: ticker.symbol, date: ticker.dates[0] })
+  const date = picked.symbol === ticker.symbol ? picked.date : ticker.dates[0]
+  const setDate = (d: string) => setPicked({ symbol: ticker.symbol, date: d })
   const { data: chain, error, loading } = useChain(ticker.symbol, date)
 
   const [exp, setExp] = useState<string | null>(null)
@@ -22,7 +26,8 @@ export function TickerPage({ ticker, history }: { ticker: IndexTicker; history: 
   }, [slices, exp])
 
   if (error) return <div className="card text-bad">Failed to load chain: {error}</div>
-  if (!chain || !slice) return <div className="card blurb">{loading ? 'Loading chain…' : 'No data.'}</div>
+  // Full-height placeholder: a short card would shrink the page and drag the scroll position to the top.
+  if (!chain || !slice) return <div className="page-loading card blurb min-h-screen">{loading ? 'Loading chain…' : 'No data.'}</div>
 
   const s = chain.summary
   const vrp = s.atm30 != null && s.rv20 != null ? s.atm30 - s.rv20 : null
@@ -31,7 +36,7 @@ export function TickerPage({ ticker, history }: { ticker: IndexTicker; history: 
   const move1d = s.atm30 == null ? null : s.atm30 / Math.sqrt(252)
 
   return (
-    <div className="space-y-4">
+    <div className={`space-y-4 transition-opacity ${chain.symbol !== ticker.symbol ? 'opacity-50' : ''}`}>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="eyebrow">{chain.name}</div>
@@ -149,21 +154,6 @@ export function TickerPage({ ticker, history }: { ticker: IndexTicker; history: 
           </InfoTip>
         </h3>
         <VolSurface slices={slices} selected={slice.exp} onSelect={setExp} />
-      </div>
-
-      <div className="card">
-        <h3 className="card-title">Signals</h3>
-        <p className="blurb mb-3">
-          <strong>z</strong> = residual ÷ half the bid–ask spread (in vol). |z| ≤ 1 means the fit sits inside the quote — no signal.{' '}
-          <strong>Confidence</strong> scales |z| from 1→4 and weights by open interest and volume.{' '}
-          <strong>Edge</strong> is what's left after crossing the spread against the fitted price; negative means the mispricing
-          doesn't survive execution. This is relative value <em>within</em> the surface, not a directional call.
-        </p>
-        <SignalsTable slices={slices} onSelect={setExp} />
-      </div>
-
-      <div className="text-xs text-muted mono">
-        median fit RMSE {num(s.fitRmse * 100, 2)} vol pts · butterfly-arb slices {s.butterflyArb} · calendar-arb pairs {s.calendarArb}
       </div>
     </div>
   )

@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { money, pct, volPts } from '../lib/format'
 import type { IndexTicker } from '../lib/types'
 
-type Key = 'symbol' | 'atm30' | 'vrp' | 'rr25' | 'term' | 'signals'
+type Key = 'symbol' | 'atm30' | 'vrp' | 'rr25' | 'term'
 
 export function Overview({ tickers, onOpen }: { tickers: IndexTicker[]; onOpen: (s: string) => void }) {
   const [sort, setSort] = useState<{ key: Key; dir: 1 | -1 }>({ key: 'vrp', dir: -1 })
@@ -16,11 +16,10 @@ export function Overview({ tickers, onOpen }: { tickers: IndexTicker[]; onOpen: 
           s,
           vrp: s.atm30 != null && s.rv20 != null ? s.atm30 - s.rv20 : null,
           term: s.atm90 != null && s.atm30 != null ? s.atm90 - s.atm30 : null,
-          signals: s.signalsRich + s.signalsCheap,
         }
       })
     const v = (x: (typeof r)[number]) =>
-      sort.key === 'symbol' ? 0 : sort.key === 'vrp' || sort.key === 'term' || sort.key === 'signals' ? x[sort.key] : x.s[sort.key]
+      sort.key === 'symbol' ? 0 : sort.key === 'vrp' || sort.key === 'term' ? x[sort.key] : x.s[sort.key]
     return r.sort((a, b) =>
       sort.key === 'symbol' ? sort.dir * a.t.symbol.localeCompare(b.t.symbol) : sort.dir * ((v(a) ?? -Infinity) - (v(b) ?? -Infinity)),
     )
@@ -51,7 +50,6 @@ export function Overview({ tickers, onOpen }: { tickers: IndexTicker[]; onOpen: 
               {th('vrp', 'IV − RV', 'vol pts')}
               {th('rr25', '25Δ RR', '30d call − put vol')}
               {th('term', '90d − 30d')}
-              {th('signals', 'Signals', 'rich / cheap with confidence ≥ 50%')}
             </tr>
           </thead>
           <tbody>
@@ -78,7 +76,6 @@ export function Overview({ tickers, onOpen }: { tickers: IndexTicker[]; onOpen: 
                 </td>
                 <td>{volPts(s.rr25)}</td>
                 <td>{volPts(term)}</td>
-                <td><span style={{ color: 'var(--rich)' }}>{s.signalsRich}</span> <span className="text-muted">/</span> <span style={{ color: 'var(--cheap)' }}>{s.signalsCheap}</span></td>
               </tr>
             ))}
           </tbody>
@@ -133,26 +130,6 @@ const GUIDE: { col: string; measures: ReactNode; means: ReactNode; read: ReactNo
     measures: <>The slope of the term structure: 90-day ATM IV minus 30-day ATM IV.</>,
     means: <>Positive (contango) is the normal state: more time means more uncertainty. Negative (inverted) means near-term vol is bid above longer-dated vol.</>,
     read: <>An inversion usually means something specific is priced into the next month, most often earnings, sometimes a macro event or ongoing stress. A deeply negative value plus a big positive IV − RV usually points to an event premium rather than generally expensive options.</>,
-  },
-  {
-    col: 'Signals',
-    measures: (
-      <>
-        Counts of individual contracts flagged <span style={{ color: 'var(--rich)' }}>rich</span> /{' '}
-        <span style={{ color: 'var(--cheap)' }}>cheap</span> with ≥ 50% confidence. A flag means the mid-price IV sits off the
-        ticker's own fitted smile by more than both the bid-ask spread and the fit's typical error, on a contract with enough
-        open interest and volume.
-      </>
-    ),
-    means: <>This is relative value <em>inside</em> one surface (this strike against its neighbours), not a view on whether the stock's vol overall is high or low.</>,
-    read: (
-      <>
-        Zero is normal: a well-arbitraged chain should produce few flags. Rich currently outnumbers cheap, most likely because most flags
-        are far out-of-the-money options priced at a few cents, where the minimum price tick props the mid above fair value.
-        On those, the Edge column on the ticker page is usually only cents. Clusters across neighbouring strikes or expiries
-        (visible in the ticker heatmap) mean more than isolated flags.
-      </>
-    ),
   },
 ]
 
