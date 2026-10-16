@@ -42,7 +42,10 @@ export function ResidualHeatmap({ slices, selected, onSelect }: {
   )
 
   return (
-    <div ref={wrapRef} className="relative overflow-x-auto">
+    // The tooltip lives on the outer, non-scrolling wrapper; only the grid scrolls on narrow screens.
+    // Otherwise a tooltip near the edge enlarges the scroll box and a scrollbar appears on hover.
+    <div ref={wrapRef} className="relative">
+      <div className="overflow-x-auto">
       <div className="grid gap-[2px] min-w-[560px]" style={{ gridTemplateColumns: `112px repeat(${COLS.length}, minmax(30px, 1fr))` }}>
         <div />
         {COLS.map((c) => (
@@ -77,6 +80,7 @@ export function ResidualHeatmap({ slices, selected, onSelect }: {
             </div>
           )
         })}
+      </div>
       </div>
       <div className="flex items-center gap-3 mt-3 text-xs text-muted flex-wrap">
         <span>cheap</span>

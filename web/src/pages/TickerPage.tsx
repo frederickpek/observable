@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { HistoryChart } from '../components/HistoryChart'
-import { ResidualHeatmap } from '../components/ResidualHeatmap'
+import { VolSurface } from '../components/VolSurface'
 import { SignalsTable } from '../components/SignalsTable'
 import { SmileChart, SmileLegend } from '../components/SmileChart'
 import { InfoTip } from '../components/InfoTip'
@@ -117,12 +117,38 @@ export function TickerPage({ ticker, history }: { ticker: IndexTicker; history: 
       </div>
 
       <div className="card">
-        <h3 className="card-title">Rich / cheap map · expiry × delta</h3>
-        <p className="blurb mb-3">
-          Every expiry's residual against its own fit, aligned by delta. Clusters matter more than single cells: a whole
-          column of red on the put wing means downside protection is bid across the curve, not one stale quote.
-        </p>
-        <ResidualHeatmap slices={slices} selected={slice.exp} onSelect={setExp} />
+        <h3 className="card-title flex items-center gap-1.5">
+          Vol surface · expiry × delta
+          <InfoTip label="Vol surface" width={420}>
+            <span className="stat-pop-h block">What it shows</span>
+            <span className="block">
+              The whole implied-vol surface in one grid: every expiry's fitted smile, read off at standard deltas. Stronger
+              colour means higher implied vol. It combines the smile (across a row) and the term structure (down a column).
+            </span>
+            <span className="stat-pop-h block mt-2">Layout</span>
+            <span className="block">
+              Rows are expiries, nearest at the top. Columns are delta buckets using out-of-the-money options: puts on the
+              left (10P = delta −0.10, the far wing), ATM in the middle, calls on the right (10C = +0.10). Click a row to
+              load its smile.
+            </span>
+            <span className="stat-pop-h block mt-2">What to look for</span>
+            <table>
+              <tbody>
+                <tr><td>Stronger left</td><td>Put skew: downside protection priced higher, normal for equities</td></tr>
+                <tr><td>Stronger right</td><td>Call skew: upside spikes feared, typical for oil</td></tr>
+                <tr><td>A strong row</td><td>An event on that expiry, usually earnings</td></tr>
+                <tr><td>Top to bottom</td><td>Term structure: fainter at the top = contango (calm now)</td></tr>
+              </tbody>
+            </table>
+            <span className="stat-pop-h block mt-2">Scale and signals</span>
+            <span className="block">
+              Colours are scaled to <em>this ticker's</em> own range, so compare shape here and levels on the Overview. A
+              small red or blue dot marks a contract flagged rich or cheap with at least 50% confidence; hover a cell for the
+              exact vol and the nearest quoted contract.
+            </span>
+          </InfoTip>
+        </h3>
+        <VolSurface slices={slices} selected={slice.exp} onSelect={setExp} />
       </div>
 
       <div className="card">

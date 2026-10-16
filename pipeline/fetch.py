@@ -1,5 +1,6 @@
 """Cboe delayed-quote endpoints (free, no key, one file per underlying)."""
 
+import http.client
 import json
 import random
 import time
@@ -21,7 +22,9 @@ class PermanentError(Exception):
 def _transient(e: Exception) -> bool:
     if isinstance(e, urllib.error.HTTPError):
         return e.code == 429 or e.code >= 500
-    return isinstance(e, (urllib.error.URLError, TimeoutError, ConnectionError, json.JSONDecodeError))
+    # IncompleteRead: the CDN closed the connection mid-download (truncated ~1.5MB chain).
+    return isinstance(e, (urllib.error.URLError, TimeoutError, ConnectionError, json.JSONDecodeError,
+                          http.client.IncompleteRead))
 
 
 def _get_json(url: str) -> dict:

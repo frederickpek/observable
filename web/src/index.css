@@ -4,14 +4,14 @@
    lightness, chroma and CVD checks in both modes. */
 :root {
   --bg: #eef1f1; --surface: #ffffff; --surface-2: #e4eaea; --ink: #17222b; --ink-muted: #55666f;
-  --line: #cfd8d8; --accent: #b45309; --accent-2: #16709f; --focus: #16709f;
+  --line: #cfd8d8; --seq-lo: #dff0ee; --seq-hi: #0b5e63; --accent: #b45309; --accent-2: #16709f; --focus: #16709f;
   --rich: #c2412d; --cheap: #16709f; --neutral: #a3adb2;
   --good: #2f7d4f; --bad: #b23a3a;
   color-scheme: light;
 }
 :root[data-theme='dark'] {
   --bg: #10171d; --surface: #182229; --surface-2: #1f2b33; --ink: #e7eef0; --ink-muted: #93a3ab;
-  --line: #28363f; --accent: #c0801c; --accent-2: #3a9fd0; --focus: #3a9fd0;
+  --line: #28363f; --seq-lo: #123338; --seq-hi: #6fe0d6; --accent: #c0801c; --accent-2: #3a9fd0; --focus: #3a9fd0;
   --rich: #e0573f; --cheap: #3a9fd0; --neutral: #55636b;
   --good: #4caf7d; --bad: #e0645f;
   color-scheme: dark;
@@ -19,7 +19,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     --bg: #10171d; --surface: #182229; --surface-2: #1f2b33; --ink: #e7eef0; --ink-muted: #93a3ab;
-    --line: #28363f; --accent: #c0801c; --accent-2: #3a9fd0; --focus: #3a9fd0;
+    --line: #28363f; --seq-lo: #123338; --seq-hi: #6fe0d6; --accent: #c0801c; --accent-2: #3a9fd0; --focus: #3a9fd0;
     --rich: #e0573f; --cheap: #3a9fd0; --neutral: #55636b;
     --good: #4caf7d; --bad: #e0645f;
     color-scheme: dark;
@@ -153,3 +153,9 @@ a.link:hover { color: var(--ink); }
 .stat-pop table { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 12px; }
 .stat-pop th { text-align: left; font-weight: 600; padding: 3px 6px 3px 0; color: color-mix(in oklab, var(--bg) 65%, var(--ink)); }
 .stat-pop td { padding: 3px 6px 3px 0; vertical-align: top; border-top: 1px solid color-mix(in oklab, var(--bg) 18%, var(--ink)); }
+
+/* Rich/cheap marker drawn on top of a vol-surface cell */
+.surface-flag {
+  position: absolute; top: 50%; left: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--surface);
+}
