@@ -30,6 +30,8 @@ export function HistoryChart({ history }: { history: Summary[] }) {
   }
 
   const t = history.map((h) => new Date(h.date))
+  // Ticks sit on real sessions only: always the first and last, plus up to 3 evenly spaced between.
+  const tickIdx = [...new Set(Array.from({ length: 5 }, (_, j) => Math.round((j / 4) * (history.length - 1))))]
   const x = scaleTime().domain([t[0], t[t.length - 1]]).range([M.left, W - M.right])
   const vals = history.flatMap((h) => [h.atm30, h.rv20]).filter((v): v is number => v != null)
   const y = scaleLinear().domain([Math.min(...vals) * 0.9, Math.max(...vals) * 1.05]).range([H - M.bottom, M.top]).nice()
@@ -52,8 +54,11 @@ export function HistoryChart({ history }: { history: Summary[] }) {
             <text className="tick" x={M.left - 8} y={y(v) + 3.5} textAnchor="end">{(v * 100).toFixed(0)}%</text>
           </g>
         ))}
-        {x.ticks(4).map((d) => (
-          <text key={+d} className="tick" x={x(d)} y={H - M.bottom + 16} textAnchor="middle">{shortDate(d.toISOString().slice(0, 10))}</text>
+        {tickIdx.map((i, j) => (
+          <text key={history[i].date} className="tick" x={x(t[i])} y={H - M.bottom + 16}
+            textAnchor={j === 0 ? 'start' : j === tickIdx.length - 1 ? 'end' : 'middle'}>
+            {shortDate(history[i].date)}
+          </text>
         ))}
         <line className="axis-line" x1={M.left} x2={W - M.right} y1={H - M.bottom} y2={H - M.bottom} />
         {SERIES.map((s) => {

@@ -144,3 +144,12 @@ a.link:hover { color: var(--ink); }
   font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;
   color: color-mix(in oklab, var(--bg) 65%, var(--ink));
 }
+
+/* Card-title ⓘ: same popover as the stat tiles, opened by hovering or focusing the marker. */
+.infotip .stat-info { cursor: help; }
+.infotip:hover .stat-info, .infotip:focus-within .stat-info { border-color: var(--accent-2); color: var(--accent-2); }
+.infotip:hover .stat-pop, .infotip:focus-within .stat-pop { opacity: 1; visibility: visible; transform: none; pointer-events: auto; }
+.infotip .stat-pop { font-weight: 400; display: block; }
+.stat-pop table { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 12px; }
+.stat-pop th { text-align: left; font-weight: 600; padding: 3px 6px 3px 0; color: color-mix(in oklab, var(--bg) 65%, var(--ink)); }
+.stat-pop td { padding: 3px 6px 3px 0; vertical-align: top; border-top: 1px solid color-mix(in oklab, var(--bg) 18%, var(--ink)); }

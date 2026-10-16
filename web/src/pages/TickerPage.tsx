@@ -3,6 +3,7 @@ import { HistoryChart } from '../components/HistoryChart'
 import { ResidualHeatmap } from '../components/ResidualHeatmap'
 import { SignalsTable } from '../components/SignalsTable'
 import { SmileChart, SmileLegend } from '../components/SmileChart'
+import { InfoTip } from '../components/InfoTip'
 import { Stat, type StatHelp } from '../components/Stat'
 import { TermStructure } from '../components/TermStructure'
 import { useChain } from '../lib/data'
@@ -79,11 +80,38 @@ export function TickerPage({ ticker, history }: { ticker: IndexTicker; history: 
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="card">
-          <h3 className="card-title">Term structure</h3>
+          <h3 className="card-title flex items-center gap-1.5">
+            Term structure
+            <InfoTip label="Term structure">
+              <span className="stat-pop-h block">What it shows</span>
+              <span className="block">
+                Each expiry's at-the-money implied vol plotted against days to expiry (log scale, so short dates get more
+                room). It shows <em>when</em> the market expects volatility, where the smile shows <em>where</em>. The dashed
+                line is 20-day realized vol. Click a point to load that expiry's smile.
+              </span>
+              <span className="stat-pop-h block mt-2">Reading the shape</span>
+              <table>
+                <thead>
+                  <tr><th>Shape</th><th>Looks like</th><th>Usually means</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Contango</td><td>Rising: short low, long higher</td><td>Calm now; the normal state, as more time means more uncertainty</td></tr>
+                  <tr><td>Inverted</td><td>Falling: short above long</td><td>Stress now, or an event coming soon</td></tr>
+                  <tr><td>Humped</td><td>Rises, then falls</td><td>Risk concentrated in a specific window</td></tr>
+                </tbody>
+              </table>
+              <span className="stat-pop-h block mt-2">Examples</span>
+              <span className="block">
+                <strong>SPY</strong> is typically in contango: calm near-term, more uncertainty priced further out.{' '}
+                <strong>USO</strong> is often humped: near-term supply risk is high, and prices are expected to settle over the
+                long run.
+              </span>
+            </InfoTip>
+          </h3>
           <TermStructure slices={slices} rv20={s.rv20} selected={slice.exp} onSelect={setExp} />
         </div>
         <div className="card">
-          <h3 className="card-title">30d implied vs realized · history</h3>
+          <h3 className="card-title">30d implied vs 20d realized · history</h3>
           <HistoryChart history={history} />
         </div>
       </div>

@@ -125,7 +125,7 @@ const GUIDE: { col: string; measures: ReactNode; means: ReactNode; read: ReactNo
   {
     col: '25Δ RR',
     measures: <>The 30-day 25-delta risk reversal: implied vol of the 25Δ call minus the 25Δ put. The two strikes sit about equally far out of the money on each side.</>,
-    means: <>The relative price of upside versus downside. Negative means puts are bid over calls, i.e. demand for crash protection, which is normal for equities.</>,
+    means: <>The relative price of upside versus downside, i.e. which way the smile tilts: negative is left-skewed, positive is right-skewed, near zero is symmetric. Negative means puts are bid over calls, i.e. demand for crash protection, which is normal for equities.</>,
     read: <>More negative means more hedging demand or fear. Index ETFs (SPY, QQQ) are usually the most negative because institutions hedge with them. Near zero or positive points to upside chasing; commodities like GLD and USO can flip positive when the risk is a spike up.</>,
   },
   {
